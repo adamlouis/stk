@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -87,24 +88,34 @@ var updateCmd = &cobra.Command{
 			return err
 		}
 
+		name := aws.String(fmt.Sprintf("stk-%d", time.Now().Unix()))
 		chc, err := svc.CreateChangeSet(&cloudformation.CreateChangeSetInput{
-			StackName:    params.StackName,
-			Parameters:   params.Parameters,
-			TemplateBody: params.TemplateBody,
-			Capabilities: params.Capabilities,
+			ChangeSetName: name,
+			StackName:     params.StackName,
+			Parameters:    params.Parameters,
+			TemplateBody:  params.TemplateBody,
+			Capabilities:  params.Capabilities,
+		})
+		if err != nil {
+			return err
+		}
+
+		err = svc.WaitUntilChangeSetCreateComplete(&cloudformation.DescribeChangeSetInput{
+			ChangeSetName: name,
+			StackName:     params.StackName,
 		})
 		if err != nil {
 			return err
 		}
 
 		// TODO: print change set details
-		if !yn(fmt.Sprintf("execute change set in region %s?", *svc.Config.Region)) {
+		if !yn(fmt.Sprintf("execute change set %s in region %s?", *name, *svc.Config.Region)) {
 			return nil
 		}
 
 		_, err = svc.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
-			StackName:     chc.StackId,
-			ChangeSetName: chc.Id,
+			ChangeSetName: name,
+			StackName:     params.StackName,
 		})
 		if err != nil {
 			return err

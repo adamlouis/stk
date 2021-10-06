@@ -12,4 +12,4 @@ define &amp; release cloudformation stacks
 
 `stk update [stack] --stack-file="..." --template-dir="..."`
 
-
+`go install github.com/adamlouis/stk`
